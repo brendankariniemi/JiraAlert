@@ -18,11 +18,13 @@ def send_sms(message):
         to=recipient_phone_number
     )
 
-    timestamp = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
-    logging.info(f"{timestamp} - Message sent. SID: {twilio_message.sid}")
+    logging.info(f"{current_time} - Message sent. SID: {twilio_message.sid}")
 
 
 def main():
+    # Construct the JQL query
+    jql_query = jql_query_base + f" AND created >= '{last_run_time}' ORDER BY created DESC"
+
     headers = {
         "Authorization": f"Bearer {jira_auth_token}"
     }
@@ -42,13 +44,13 @@ def main():
                 message = "\nNew Issues: \n\n" + message
                 send_sms(message)
             else:
-                logging.info(f"{datetime.now().strftime('%d/%m/%Y %H:%M:%S')} - No issues found.")
+                logging.info(f"{current_time} - No issues found.")
         else:
             logging.error(
-                f"{datetime.now().strftime('%d/%m/%Y %H:%M:%S')} - Error: {response.status_code}, {response.text}")
+                f"{current_time} - Error: {response.status_code}, {response.text}")
 
     except Exception as e:
-        logging.error(f"{datetime.now().strftime('%d/%m/%Y %H:%M:%S')} - An error occurred: {str(e)}")
+        logging.error(f"{current_time} - An error occurred: {str(e)}")
 
 
 if __name__ == '__main__':
@@ -64,6 +66,15 @@ if __name__ == '__main__':
     # Read Jira info
     jira_url = config['Jira']['url']
     jira_auth_token = config['Jira']['auth_token']
-    jql_query = config['Jira']['jql_query']
+    jql_query_base = config['Jira']['jql_query_base']
+
+    # Read run info
+    last_run_time = config['History']['last_run_time']
+
+    # Write new run time
+    current_time = datetime.now().strftime("%Y-%m-%d %H:%M")
+    config['History']['last_run_time'] = current_time
+    with open('config.ini', 'w') as configfile:
+        config.write(configfile)
 
     main()
